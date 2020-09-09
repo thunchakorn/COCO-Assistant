@@ -8,6 +8,8 @@ git+https://github.com/ashnair1/cocoapi.git#egg=pycocotools&subdirectory=PythonA
 seaborn
 scikit-image
 tqdm
+funcy
+sklearn
 
 # packaging
 setuptools==40.6.3

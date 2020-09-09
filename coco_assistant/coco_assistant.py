@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import shutil
+import funcy
+from sklearn.model_selection import train_test_split
 
 from pycocotools.coco import COCO
 
@@ -71,43 +73,10 @@ class COCO_Assistant():
 
         self.ann_anchors = []
 
-    def merge(self, merge_images=True):
+    def merge(self):
         """
         Function for merging multiple coco datasets
         """
-
-        self.resim_dir = os.path.join(self.res_dir, 'merged', 'images')
-        self.resann_dir = os.path.join(self.res_dir, 'merged', 'annotations')
-
-        # Create directories for merged results and clear the previous ones
-        # The exist_ok is for dealing with merged folder
-        # TODO: Can be done better
-        if os.path.exists(self.resim_dir) is False:
-            os.makedirs(self.resim_dir, exist_ok=True)
-        else:
-            shutil.rmtree(self.resim_dir)
-            os.makedirs(self.resim_dir, exist_ok=True)
-        if os.path.exists(self.resann_dir) is False:
-            os.makedirs(self.resann_dir, exist_ok=True)
-        else:
-            shutil.rmtree(self.resann_dir)
-            os.makedirs(self.resann_dir, exist_ok=True)
-
-        if merge_images:
-            print("Merging image dirs")
-            im_dirs = [os.path.join(self.img_dir, folder) for folder in self.imgfolders]
-            imext = [".png", ".jpg"]
-
-            logging.debug("Merging Image Dirs...")
-
-            for imdir in tqdm(im_dirs):
-                ims = [i for i in os.listdir(imdir) if i[-4:].lower() in imext]
-                for im in ims:
-                    shutil.copyfile(os.path.join(imdir, im), os.path.join(self.resim_dir, im))
-
-        else:
-            logging.debug("Not merging Image Dirs...")
-
         cann = {'images': [],
                 'annotations': [],
                 'info': None,
@@ -116,7 +85,7 @@ class COCO_Assistant():
 
         logging.debug("Merging Annotations...")
 
-        dst_ann = os.path.join(self.resann_dir, 'merged.json')
+        self.dst_ann = os.path.join(self.res_dir, 'merged.json')
 
         print("Merging annotations")
         for j in tqdm(self.jsonfiles):
@@ -182,8 +151,9 @@ class COCO_Assistant():
 
                 last_imid = cann['images'][-1]['id']
                 last_annid = cann['annotations'][-1]['id']
-
-        with open(dst_ann, 'w') as aw:
+        for img in cann['images']:
+            img['file_name'] = os.path.join(self.img_dir, img['file_name'])
+        with open(self.dst_ann, 'w') as aw:
             json.dump(cann, aw)
 
     def remove_cat(self, interactive=True, jc=None, rcats=None):
@@ -308,6 +278,36 @@ class COCO_Assistant():
         ann = self.annfiles[ind]
         img_dir = os.path.join(self.img_dir, dir_choice)
         cocovis.visualise_all(ann, img_dir)
+
+    def save_coco(self, file, info, licenses, images, annotations, categories):
+        with open(file, 'wt', encoding='UTF-8') as coco:
+            json.dump({ 'info': info, 'licenses': licenses, 'images': images, 
+                'annotations': annotations, 'categories': categories}, coco, indent=2, sort_keys=True)
+
+    def filter_annotations(self, annotations, images):
+        image_ids = funcy.lmap(lambda i: int(i['id']), images)
+        return funcy.lfilter(lambda a: int(a['image_id']) in image_ids, annotations)
+    
+    def splitter(self, annotations, ratio, train_path, test_path):
+        with open(annotations, 'rt', encoding='UTF-8') as annotations:
+            coco = json.load(annotations)
+        info = coco['info']
+        licenses = coco['licenses']
+        images = coco['images']
+        annotations = coco['annotations']
+        categories = coco['categories']
+
+        number_of_images = len(images)
+
+        images_with_annotations = funcy.lmap(lambda a: int(a['image_id']), annotations)
+        images = funcy.lremove(lambda i: i['id'] not in images_with_annotations, images)
+
+        x, y = train_test_split(images, train_size=ratio)
+
+        self.save_coco(train_path, info, licenses, x, self.filter_annotations(annotations, x), categories)
+        self.save_coco(test_path, info, licenses, y, self.filter_annotations(annotations, y), categories)
+
+        print("Saved {} entries in {} and {} in {}".format(len(x), train_path, len(y), test_path))
 
 
 if __name__ == "__main__":
