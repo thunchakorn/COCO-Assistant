@@ -21,15 +21,17 @@ parser.add_argument('-s', dest='split', type=float, required=True,
 args = parser.parse_args()
 
 def main(args):
+    img_dir = args.img_dir
+    ann_dir = args.ann_dir
+    cas = COCO_Assistant(img_dir, ann_dir)
     if args.mode == "m+s" or args.mode == "m":
         img_dir = args.img_dir
         ann_dir = args.ann_dir
-        cas = COCO_Assistant(img_dir, ann_dir)
         cas.merge()
         if args.mode == "m+s":
             cas.splitter(cas.dst_ann, args.split, os.path.join(cas.res_dir, args.train), os.path.join(cas.res_dir, args.test))
     elif args.mode == "s":
-        cas.splitter(args.annotations, args.split, args.train, args.test_path)
+        cas.splitter(args.annotations, args.split, args.train, args.test)
     else:
         print('wrong mode')
 

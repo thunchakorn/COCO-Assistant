@@ -44,8 +44,8 @@ class COCO_Assistant():
         """
         self.img_dir = img_dir
         self.ann_dir = ann_dir
-        if os.path.dirname(ann_dir) != os.path.dirname(img_dir):
-            raise AssertionError('Directory not in expected format')
+        # if os.path.dirname(ann_dir) != os.path.dirname(img_dir):
+        #     raise AssertionError('Directory not in expected format')
         self.res_dir = os.path.join(os.path.dirname(ann_dir), 'results')
 
         # Create Results Directory
