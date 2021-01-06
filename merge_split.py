@@ -27,7 +27,7 @@ def main(args):
         if args.mode == "m+s":
             cas.splitter(cas.dst_ann, args.split, os.path.join(cas.res_dir, args.train), os.path.join(cas.res_dir, args.test))
     elif args.mode == "s":
-        cas.splitter(args.annotations, args.split, args.train, args.test_path)
+        cas.splitter(args.annotations, args.split, args.train, args.test)
     else:
         print('wrong mode')
 
